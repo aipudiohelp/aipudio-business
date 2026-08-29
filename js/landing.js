@@ -1,196 +1,227 @@
 let landingUser = null;
-let businesses = [];
-let products = [];
-
+let selectedBusiness = null;
+let businessProducts = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-
   const session = await requireAuth();
 
-  if (!session || !window.sb) return;
+  if (!session || !window.supabaseClient) {
+    console.error("لا توجد جلسة دخول أو Supabase غير متاح.");
+    return;
+  }
 
   landingUser = session.user;
 
-  const businessSelect = document.getElementById("businessSelect");
+  const saveButton = document.getElementById("saveLanding");
 
-  businessSelect.addEventListener("change", async () => {
+  if (saveButton) {
+    saveButton.addEventListener("click", saveLanding);
+  }
 
-    const businessId = businessSelect.value;
-
-    if (!businessId) {
-      document.getElementById("businessPreview").innerHTML = "";
-      document.getElementById("productsSelection").innerHTML =
-        '<div class="empty-box">اختر نشاطًا أولًا.</div>';
-      return;
-    }
-
-    await loadBusinessProducts(businessId);
-
-  });
-
-
-  document
-    .getElementById("saveLanding")
-    .addEventListener("click", saveLanding);
-
-
+  // تحميل النشاط تلقائياً
   await loadBusinesses();
 
+  // تحميل صفحات الهبوط السابقة
   await loadLandings();
-
 });
 
 
 /* =========================================================
-   تحميل أنشطة المستخدم
+   1) تحميل أنشطة المستخدم
 ========================================================= */
 
 async function loadBusinesses() {
-
   const select = document.getElementById("businessSelect");
+
+  if (!select) {
+    console.error("العنصر businessSelect غير موجود في landing.html");
+    return;
+  }
+
+  select.innerHTML = `<option value="">جاري تحميل الأنشطة...</option>`;
 
   const { data, error } = await sb
     .from("businesses")
-    .select("*")
+    .select("id, name, slug, description, whatsapp")
     .eq("user_id", landingUser.id)
     .order("created_at", { ascending: false });
 
-
   if (error) {
+    console.error("خطأ تحميل الأنشطة:", error);
 
-    select.innerHTML =
-      `<option value="">${escapeHtml(error.message)}</option>`;
+    select.innerHTML = `
+      <option value="">
+        تعذر تحميل النشاط
+      </option>
+    `;
 
     show(
       "landingMessage",
-      error.message,
+      "تعذر تحميل النشاط: " + error.message,
       true
     );
 
     return;
   }
 
+  if (!data || data.length === 0) {
+    select.innerHTML = `
+      <option value="">
+        لا يوجد نشاط مسجل
+      </option>
+    `;
 
-  businesses = data || [];
-
-
-  if (!businesses.length) {
-
-    select.innerHTML =
-      '<option value="">لا يوجد نشاط محفوظ</option>';
-
-    document.getElementById("productsSelection").innerHTML =
-      '<div class="empty-box">أضف نشاطًا أولًا من إدارة النشاط.</div>';
+    show(
+      "landingMessage",
+      "لم يتم العثور على نشاط مرتبط بحسابك.",
+      true
+    );
 
     return;
   }
 
+  // عرض الأنشطة
+  select.innerHTML = `
+    <option value="">اختر النشاط</option>
+    ${data.map(b => `
+      <option value="${escapeAttr(b.id)}">
+        ${escapeHtml(b.name || "نشاط بدون اسم")}
+      </option>
+    `).join("")}
+  `;
 
-  select.innerHTML =
-    '<option value="">اختر النشاط...</option>' +
+  // لو عند المستخدم نشاط واحد نختاره تلقائياً
+  if (data.length === 1) {
+    selectedBusiness = data[0];
 
-    businesses
-      .map(b => `
-        <option value="${escapeHtml(b.id)}">
-          ${escapeHtml(b.name || "نشاط بدون اسم")}
-        </option>
-      `)
-      .join("");
+    select.value = data[0].id;
 
+    await loadProducts(data[0].id);
 
-  /*
-    لو المستخدم لديه نشاط واحد فقط،
-    نختاره تلقائيًا.
-  */
-
-  if (businesses.length === 1) {
-
-    select.value = businesses[0].id;
-
-    await loadBusinessProducts(businesses[0].id);
-
+    fillBusinessData(data[0]);
   }
 
+  // تغيير النشاط
+  select.addEventListener("change", async function () {
+    const businessId = this.value;
+
+    if (!businessId) {
+      selectedBusiness = null;
+      businessProducts = [];
+
+      clearBusinessData();
+      renderProducts([]);
+
+      return;
+    }
+
+    selectedBusiness = data.find(b => b.id === businessId) || null;
+
+    if (!selectedBusiness) return;
+
+    fillBusinessData(selectedBusiness);
+
+    await loadProducts(businessId);
+  });
 }
 
 
 /* =========================================================
-   تحميل منتجات النشاط
+   2) تعبئة بيانات النشاط تلقائياً
 ========================================================= */
 
-async function loadBusinessProducts(businessId) {
+function fillBusinessData(business) {
+  const whatsapp = document.getElementById("pageWhatsapp");
 
-  const productContainer =
-    document.getElementById("productsSelection");
+  if (whatsapp && business.whatsapp) {
+    whatsapp.value = business.whatsapp;
+  }
+}
 
-  const business =
-    businesses.find(b => b.id === businessId);
+
+function clearBusinessData() {
+  const whatsapp = document.getElementById("pageWhatsapp");
+
+  if (whatsapp) {
+    whatsapp.value = "";
+  }
+}
 
 
-  /* عرض بيانات النشاط */
+/* =========================================================
+   3) تحميل منتجات النشاط
+========================================================= */
 
-  if (business) {
+async function loadProducts(businessId) {
+  const container = document.getElementById("productList");
 
-    document.getElementById("businessPreview").innerHTML = `
-
-      <div class="business-preview">
-
-        <strong>
-          ${escapeHtml(business.name || "بدون اسم")}
-        </strong>
-
-        <span>
-          ${escapeHtml(business.description || "لا يوجد وصف")}
-        </span>
-
-        <small>
-          واتساب:
-          ${escapeHtml(
-            business.whatsapp ||
-            business.phone ||
-            business.whatsapp_number ||
-            "غير محدد"
-          )}
-        </small>
-
-      </div>
-
-    `;
-
+  if (!container) {
+    console.error("العنصر productList غير موجود في landing.html");
+    return;
   }
 
-
-  /* جلب المنتجات */
-
-  productContainer.innerHTML =
-    '<div class="empty-box">جاري تحميل المنتجات...</div>';
-
+  container.innerHTML = `
+    <div class="empty">
+      جاري تحميل المنتجات...
+    </div>
+  `;
 
   const { data, error } = await sb
     .from("products")
-    .select("*")
+    .select(`
+      id,
+      business_id,
+      name,
+      slug,
+      description,
+      price,
+      currency,
+      image_url,
+      whatsapp_message,
+      is_active,
+      sort_order
+    `)
     .eq("business_id", businessId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-
   if (error) {
+    console.error("خطأ تحميل المنتجات:", error);
 
-    productContainer.innerHTML =
-      `<div class="empty-box">${escapeHtml(error.message)}</div>`;
+    container.innerHTML = `
+      <div class="empty">
+        تعذر تحميل المنتجات
+      </div>
+    `;
+
+    show(
+      "landingMessage",
+      "تعذر تحميل المنتجات: " + error.message,
+      true
+    );
 
     return;
   }
 
+  businessProducts = data || [];
 
-  products = data || [];
+  renderProducts(businessProducts);
+}
 
+
+/* =========================================================
+   4) عرض المنتجات كاختيارات
+========================================================= */
+
+function renderProducts(products) {
+  const container = document.getElementById("productList");
+
+  if (!container) return;
 
   if (!products.length) {
-
-    productContainer.innerHTML = `
-      <div class="empty-box">
+    container.innerHTML = `
+      <div class="empty">
         لا توجد منتجات نشطة لهذا النشاط.
       </div>
     `;
@@ -198,120 +229,81 @@ async function loadBusinessProducts(businessId) {
     return;
   }
 
+  container.innerHTML = products.map(product => `
+    <label class="product-option">
+      <input
+        type="checkbox"
+        class="landing-product"
+        value="${escapeAttr(product.id)}"
+      >
 
-  productContainer.innerHTML = products
-    .map(product => {
+      <div class="product-option-content">
+        <strong>
+          ${escapeHtml(product.name || "منتج")}
+        </strong>
 
-      const price =
-        product.price !== null &&
-        product.price !== undefined
-          ? `${product.price} ${product.currency || "EGP"}`
-          : "";
+        ${
+          product.description
+            ? `<small>${escapeHtml(product.description)}</small>`
+            : ""
+        }
 
-
-      return `
-
-        <label class="product-option">
-
-          <input
-            type="checkbox"
-            class="product-checkbox"
-            value="${escapeHtml(product.id)}"
-          >
-
-          <div class="product-info">
-
-            <span class="product-name">
-              ${escapeHtml(product.name || "منتج")}
-            </span>
-
-            <span class="product-price">
-              ${escapeHtml(price)}
-            </span>
-
-          </div>
-
-        </label>
-
-      `;
-
-    })
-    .join("");
-
+        ${
+          product.price !== null && product.price !== undefined
+            ? `<small>
+                السعر:
+                ${escapeHtml(product.price)}
+                ${escapeHtml(product.currency || "EGP")}
+              </small>`
+            : ""
+        }
+      </div>
+    </label>
+  `).join("");
 }
 
 
 /* =========================================================
-   إنشاء صفحة الهبوط
+   5) حفظ صفحة الهبوط
 ========================================================= */
 
 async function saveLanding() {
 
-  const businessId =
-    document.getElementById("businessSelect").value;
-
-
-  if (!businessId) {
-
+  if (!selectedBusiness) {
     show(
       "landingMessage",
-      "اختر النشاط أولًا.",
+      "اختر نشاطاً أولاً.",
       true
     );
 
     return;
   }
 
-
-  const selectedProducts =
-    Array.from(
-      document.querySelectorAll(".product-checkbox:checked")
-    ).map(input => input.value);
-
-
-  if (!selectedProducts.length) {
-
-    show(
-      "landingMessage",
-      "اختر منتجًا واحدًا على الأقل لعرضه في الصفحة.",
-      true
-    );
-
-    return;
-  }
+  const selectedProductIds = Array.from(
+    document.querySelectorAll(".landing-product:checked")
+  ).map(input => input.value);
 
 
   const title =
-    document.getElementById("pageTitle").value.trim();
-
-
-  const slug =
-    normalizeSlug(
-      document.getElementById("pageSlug").value.trim()
-    );
-
+    document.getElementById("pageTitle")?.value.trim() || "";
 
   const headline =
-    document.getElementById("pageHeadline").value.trim();
+    document.getElementById("pageHeadline")?.value.trim() || "";
 
+  const description =
+    document.getElementById("pageDescription")?.value.trim() || "";
 
-  const subtitle =
-    document.getElementById("pageSubtitle").value.trim();
+  const imageUrl =
+    document.getElementById("pageImage")?.value.trim() || "";
 
-
-  const seoTitle =
-    document.getElementById("seoTitle").value.trim();
-
-
-  const seoDescription =
-    document.getElementById("seoDescription").value.trim();
+  const whatsapp =
+    document.getElementById("pageWhatsapp")?.value.trim() || "";
 
 
   if (!title) {
-
     show(
       "landingMessage",
-      "اكتب عنوان صفحة الهبوط.",
+      "اكتب عنوان الصفحة.",
       true
     );
 
@@ -319,11 +311,10 @@ async function saveLanding() {
   }
 
 
-  if (!slug) {
-
+  if (!selectedProductIds.length) {
     show(
       "landingMessage",
-      "اكتب الرابط المختصر للصفحة.",
+      "اختر منتجاً واحداً على الأقل.",
       true
     );
 
@@ -331,90 +322,72 @@ async function saveLanding() {
   }
 
 
-  if (!headline) {
-
-    show(
-      "landingMessage",
-      "اكتب العنوان الرئيسي للصفحة.",
-      true
-    );
-
-    return;
-  }
+  // المنتجات المختارة بالكامل
+  const selectedProducts = businessProducts.filter(product =>
+    selectedProductIds.includes(product.id)
+  );
 
 
   /*
-    نحفظ البيانات الخاصة بالصفحة داخل content
-    لأن جدول landing_pages لا يحتوي على أعمدة
-    headline / description / slug / image...
+    جدول landing_pages لا يحتوي:
+    owner_id
+    slug
+    headline
+    description
+    image_url
+    whatsapp
+
+    لذلك نخزن بيانات الصفحة داخل content JSONB.
   */
 
-  const content = {
-
-    slug: slug,
-
-    headline: headline,
-
-    subtitle: subtitle,
-
-    product_ids: selectedProducts,
-
-    business_id: businessId
-
-  };
-
-
   const payload = {
-
-    business_id: businessId,
+    business_id: selectedBusiness.id,
 
     title: title,
 
-    subtitle: subtitle,
+    subtitle: headline || null,
 
-    page_type: "products",
+    page_type: "product",
 
-    content: content,
+    content: {
+      description: description,
 
-    seo_title: seoTitle || title,
+      image_url: imageUrl,
 
-    seo_description:
-      seoDescription || subtitle,
+      whatsapp: whatsapp,
+
+      business: {
+        id: selectedBusiness.id,
+        name: selectedBusiness.name,
+        slug: selectedBusiness.slug || null,
+        description: selectedBusiness.description || null,
+        whatsapp: selectedBusiness.whatsapp || null
+      },
+
+      products: selectedProducts
+    },
+
+    seo_title: title,
+
+    seo_description: description || headline || null,
 
     published: false
-
   };
 
 
-  const button =
-    document.getElementById("saveLanding");
-
-
-  button.disabled = true;
-
-  button.textContent =
-    "جاري إنشاء الصفحة...";
-
-
-  const { data, error } =
-    await sb
-      .from("landing_pages")
-      .insert(payload)
-      .select()
-      .single();
-
-
-  button.disabled = false;
-
-  button.textContent =
-    "إنشاء صفحة الهبوط";
+  const { data, error } = await sb
+    .from("landing_pages")
+    .insert(payload)
+    .select()
+    .single();
 
 
   if (error) {
+    console.error("خطأ حفظ صفحة الهبوط:", error);
 
     show(
       "landingMessage",
-      error.message,
+      "تعذر حفظ صفحة الهبوط: " + error.message,
       true
     );
 
@@ -424,296 +397,226 @@ async function saveLanding() {
 
   show(
     "landingMessage",
-    "تم إنشاء صفحة الهبوط بنجاح."
+    "تم حفظ صفحة الهبوط بنجاح."
   );
 
 
-  /*
-    تنظيف حقول الصفحة فقط.
-    النشاط والمنتجات لا يتم حذفها.
-  */
+  // تنظيف النموذج
+  [
+    "pageTitle",
+    "pageHeadline",
+    "pageDescription",
+    "pageImage"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
 
-  document.getElementById("pageTitle").value = "";
-  document.getElementById("pageSlug").value = "";
-  document.getElementById("pageHeadline").value = "";
-  document.getElementById("pageSubtitle").value = "";
-  document.getElementById("seoTitle").value = "";
-  document.getElementById("seoDescription").value = "";
 
-
+  // إلغاء اختيار المنتجات
   document
-    .querySelectorAll(".product-checkbox")
+    .querySelectorAll(".landing-product")
     .forEach(input => {
       input.checked = false;
     });
 
 
   await loadLandings();
-
 }
 
 
 /* =========================================================
-   تحميل صفحات الهبوط الخاصة بالمستخدم
+   6) تحميل صفحات الهبوط السابقة
 ========================================================= */
 
 async function loadLandings() {
+  const list = document.getElementById("landingList");
 
-  const list =
-    document.getElementById("landingList");
+  if (!list || !landingUser) return;
 
-
-  list.innerHTML =
-    '<div class="empty-box">جاري تحميل الصفحات...</div>';
+  list.innerHTML = `
+    <div class="empty">
+      جاري تحميل الصفحات...
+    </div>
+  `;
 
 
   /*
-    لا نستطيع استخدام owner_id
-    لأن landing_pages لا يحتوي عليه.
+    لا نستخدم owner_id هنا.
 
-    لذلك نجلب صفحات الأنشطة التي يملكها المستخدم.
+    نبحث عن أنشطة المستخدم أولاً،
+    ثم صفحات الهبوط التابعة لها.
   */
 
-  if (!businesses.length) {
+  const { data: businesses, error: businessError } = await sb
+    .from("businesses")
+    .select("id")
+    .eq("user_id", landingUser.id);
 
-    list.innerHTML =
-      '<div class="empty-box">لا توجد صفحات محفوظة.</div>';
+
+  if (businessError) {
+    list.innerHTML = `
+      <div class="empty">
+        ${escapeHtml(businessError.message)}
+      </div>
+    `;
 
     return;
   }
 
 
-  const businessIds =
-    businesses.map(b => b.id);
+  if (!businesses || !businesses.length) {
+    list.innerHTML = `
+      <div class="empty">
+        لا توجد أنشطة مرتبطة بالحساب.
+      </div>
+    `;
+
+    return;
+  }
 
 
-  const { data, error } =
-    await sb
-      .from("landing_pages")
-      .select("*")
-      .in("business_id", businessIds)
-      .order("created_at", { ascending: false });
+  const businessIds = businesses.map(b => b.id);
+
+
+  const { data, error } = await sb
+    .from("landing_pages")
+    .select("*")
+    .in("business_id", businessIds)
+    .order("created_at", { ascending: false });
 
 
   if (error) {
-
-    list.innerHTML =
-      `<div class="empty-box">${escapeHtml(error.message)}</div>`;
+    list.innerHTML = `
+      <div class="empty">
+        ${escapeHtml(error.message)}
+      </div>
+    `;
 
     return;
   }
 
 
   if (!data || !data.length) {
-
-    list.innerHTML =
-      '<div class="empty-box">لا توجد صفحات محفوظة.</div>';
+    list.innerHTML = `
+      <div class="empty">
+        لا توجد صفحات محفوظة.
+      </div>
+    `;
 
     return;
   }
 
 
-  list.innerHTML = data
-    .map(page => {
+  list.innerHTML = data.map(page => `
+    <div class="item">
 
-      const business =
-        businesses.find(
-          b => b.id === page.business_id
-        );
+      <div>
+        <b>
+          ${escapeHtml(
+            page.title ||
+            page.subtitle ||
+            "صفحة هبوط"
+          )}
+        </b>
 
+        <small>
+          ${escapeHtml(page.page_type || "")}
+        </small>
+      </div>
 
-      const slug =
-        page.content?.slug || "";
+      <button
+        class="btn danger"
+        onclick="deleteLanding('${escapeAttr(page.id)}')"
+      >
+        حذف
+      </button>
 
-
-      const status =
-        page.published
-          ? "منشورة"
-          : "مسودة";
-
-
-      return `
-
-        <div class="landing-item">
-
-          <div class="landing-item-info">
-
-            <b>
-              ${escapeHtml(
-                page.title ||
-                page.content?.headline ||
-                "صفحة هبوط"
-              )}
-            </b>
-
-            <small>
-              النشاط:
-              ${escapeHtml(
-                business?.name || "غير معروف"
-              )}
-            </small>
-
-            <small>
-              الرابط:
-              ${escapeHtml(slug)}
-            </small>
-
-            <small>
-              الحالة:
-              ${status}
-            </small>
-
-          </div>
-
-
-          <div class="landing-actions">
-
-            <button
-              class="btn danger"
-              type="button"
-              onclick="deleteLanding('${page.id}')"
-            >
-              حذف
-            </button>
-
-          </div>
-
-        </div>
-
-      `;
-
-    })
-    .join("");
-
+    </div>
+  `).join("");
 }
 
 
 /* =========================================================
-   حذف صفحة
+   7) حذف صفحة هبوط
 ========================================================= */
 
 async function deleteLanding(id) {
 
-  if (!confirm("هل تريد حذف صفحة الهبوط؟")) {
+  if (!confirm("حذف الصفحة؟")) return;
+
+
+  const { data: businesses, error: businessError } = await sb
+    .from("businesses")
+    .select("id")
+    .eq("user_id", landingUser.id);
+
+
+  if (businessError) {
+    alert(businessError.message);
     return;
   }
 
 
-  /*
-    نحدد الصفحة من الصفحات التابعة لأنشطة المستخدم
-    قبل تنفيذ الحذف.
-  */
-
-  const { data: page, error: findError } =
-    await sb
-      .from("landing_pages")
-      .select("id,business_id")
-      .eq("id", id)
-      .single();
+  const businessIds = (businesses || []).map(b => b.id);
 
 
-  if (findError || !page) {
-
-    alert(
-      findError?.message ||
-      "لم يتم العثور على الصفحة."
-    );
-
+  if (!businessIds.length) {
+    alert("لا يوجد نشاط مرتبط بالحساب.");
     return;
   }
 
 
-  const ownsBusiness =
-    businesses.some(
-      b => b.id === page.business_id
-    );
-
-
-  if (!ownsBusiness) {
-
-    alert("غير مسموح بحذف هذه الصفحة.");
-
-    return;
-  }
-
-
-  const { error } =
-    await sb
-      .from("landing_pages")
-      .delete()
-      .eq("id", id);
+  const { error } = await sb
+    .from("landing_pages")
+    .delete()
+    .eq("id", id)
+    .in("business_id", businessIds);
 
 
   if (error) {
-
     alert(error.message);
-
     return;
   }
 
 
   await loadLandings();
-
 }
 
 
 /* =========================================================
-   تحويل الرابط إلى Slug
-========================================================= */
-
-function normalizeSlug(value) {
-
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9\u0600-\u06ff_-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-
-}
-
-
-/* =========================================================
-   رسائل النظام
+   Helpers
 ========================================================= */
 
 function show(id, text, error = false) {
-
-  const el =
-    document.getElementById(id);
-
+  const el = document.getElementById(id);
 
   if (!el) return;
-
 
   el.textContent = text;
 
   el.className =
     "message " +
     (error ? "error" : "success");
-
 }
 
 
-/* =========================================================
-   حماية النصوص
-========================================================= */
-
 function escapeHtml(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    m => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m])
+  );
+}
 
+
+function escapeAttr(value) {
   return String(value ?? "")
-    .replace(
-      /[&<>"']/g,
-      character => ({
-
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-
-      })[character]
-    );
-
-                                           }
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+    }
