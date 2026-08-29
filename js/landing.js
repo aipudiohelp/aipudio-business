@@ -3,11 +3,15 @@ let businesses = [];
 let selectedBusiness = null;
 let products = [];
 
-const sb = window.supabaseClient;
+function getClient() {
+  return window.supabaseClient || null;
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   const session = await requireAuth();
-  if (!session || !sb) return;
+  const client = getClient();
+
+  if (!session || !client) return;
 
   landingUser = session.user;
 
@@ -15,8 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saveButton = document.getElementById("saveLanding");
 
   if (businessSelect) {
-    businessSelect.addEventListener("change", async (e) => {
-      await selectBusiness(e.target.value);
+    businessSelect.addEventListener("change", async (event) => {
+      await selectBusiness(event.target.value);
     });
   }
 
@@ -26,20 +30,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadBusinesses() {
+  const client = getClient();
   const select = document.getElementById("businessSelect");
-  if (!select) return;
+  if (!client || !select) return;
 
   select.innerHTML = '<option value="">جاري تحميل الأنشطة...</option>';
 
-  const { data, error } = await sb
+  const { data, error } = await client
     .from("businesses")
     .select("*")
     .eq("user_id", landingUser.id)
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("Businesses error:", error);
     select.innerHTML = '<option value="">تعذر تحميل الأنشطة</option>';
-    show("landingMessage", error.message, true);
+    show("landingMessage", "تعذر تحميل الأنشطة: " + (error.message || "خطأ غير معروف"), true);
     return;
   }
 
@@ -47,8 +53,8 @@ async function loadBusinesses() {
 
   if (!businesses.length) {
     select.innerHTML = '<option value="">لا توجد أنشطة مسجلة</option>';
-    document.getElementById("productList").innerHTML =
-      '<div class="empty">أضف نشاطًا من صفحة إدارة النشاط أولًا.</div>';
+    const list = document.getElementById("productList");
+    if (list) list.innerHTML = '<div class="empty">أضف نشاطًا من صفحة إدارة النشاط أولًا.</div>';
     return;
   }
 
@@ -58,6 +64,7 @@ async function loadBusinesses() {
       `<option value="${escapeAttr(b.id)}">${escapeHtml(b.name || "نشاط بدون اسم")}</option>`
     ).join("");
 
+  // With one business, select it automatically.
   if (businesses.length === 1) {
     select.value = businesses[0].id;
     await selectBusiness(businesses[0].id);
@@ -71,18 +78,25 @@ async function selectBusiness(businessId) {
   const productList = document.getElementById("productList");
 
   if (!selectedBusiness) {
-    info.hidden = true;
-    info.textContent = "";
+    if (info) {
+      info.hidden = true;
+      info.textContent = "";
+    }
     products = [];
-    productList.innerHTML = '<div class="empty">اختر نشاطًا أولًا.</div>';
+    if (productList) productList.innerHTML = '<div class="empty">اختر نشاطًا أولًا.</div>';
+    const saved = document.getElementById("landingList");
+    if (saved) saved.innerHTML = '<div class="empty">اختر نشاطًا لعرض صفحاته.</div>';
     return;
   }
 
-  info.hidden = false;
-  info.textContent = `النشاط المختار: ${selectedBusiness.name || "بدون اسم"}`;
+  if (info) {
+    info.hidden = false;
+    info.textContent = `النشاط المختار: ${selectedBusiness.name || "بدون اسم"}`;
+  }
 
   await loadProducts(selectedBusiness.id);
 
+  // Use the actual WhatsApp field from the business schema when available.
   const whatsapp = selectedBusiness.whatsapp || selectedBusiness.phone || "";
   const whatsappInput = document.getElementById("pageWhatsapp");
   if (whatsappInput && !whatsappInput.value.trim() && whatsapp) {
@@ -93,39 +107,42 @@ async function selectBusiness(businessId) {
 }
 
 async function loadProducts(businessId) {
+  const client = getClient();
   const list = document.getElementById("productList");
+  if (!client || !list) return;
+
   list.innerHTML = '<div class="loading">جاري تحميل المنتجات...</div>';
 
-  const { data, error } = await sb
+  const { data, error } = await client
     .from("products")
     .select("*")
     .eq("business_id", businessId)
-    .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("Products error:", error);
     products = [];
-    list.innerHTML = `<div class="empty">تعذر تحميل المنتجات: ${escapeHtml(error.message)}</div>`;
+    list.innerHTML = `<div class="empty">تعذر تحميل المنتجات: ${escapeHtml(error.message || "خطأ غير معروف")}</div>`;
     return;
   }
 
   products = data || [];
 
   if (!products.length) {
-    list.innerHTML = '<div class="empty">لا توجد منتجات نشطة مرتبطة بهذا النشاط.</div>';
+    list.innerHTML = '<div class="empty">لا توجد منتجات مرتبطة بهذا النشاط.</div>';
     return;
   }
 
   list.innerHTML = `
     <div class="product-list">
-      ${products.map(p => `
+      ${products.map(product => `
         <label class="product-row">
-          <input type="checkbox" class="product-check" value="${escapeAttr(p.id)}">
+          <input type="checkbox" class="product-check" value="${escapeAttr(product.id)}">
           <span class="product-info">
-            <b>${escapeHtml(p.name || "منتج بدون اسم")}</b>
+            <b>${escapeHtml(product.name || "منتج بدون اسم")}</b>
             <span class="product-meta">
-              ${p.price != null ? `${escapeHtml(p.price)} ${escapeHtml(p.currency || "EGP")}` : ""}
+              ${product.price != null ? `${escapeHtml(product.price)} ${escapeHtml(product.currency || "EGP")}` : ""}
             </span>
           </span>
         </label>
@@ -135,17 +152,24 @@ async function loadProducts(businessId) {
 }
 
 async function saveLanding() {
+  const client = getClient();
+
+  if (!client) {
+    show("landingMessage", "تعذر الاتصال بقاعدة البيانات.", true);
+    return;
+  }
+
   if (!selectedBusiness) {
     show("landingMessage", "اختر النشاط أولًا.", true);
     return;
   }
 
-  const title = document.getElementById("pageTitle").value.trim();
-  const headline = document.getElementById("pageHeadline").value.trim();
-  const description = document.getElementById("pageDescription").value.trim();
-  const imageUrl = document.getElementById("pageImage").value.trim();
-  const whatsapp = document.getElementById("pageWhatsapp").value.trim();
+  const title = document.getElementById("pageTitle")?.value.trim() || "";
   const slug = document.getElementById("pageSlug")?.value.trim() || "";
+  const headline = document.getElementById("pageHeadline")?.value.trim() || "";
+  const description = document.getElementById("pageDescription")?.value.trim() || "";
+  const imageUrl = document.getElementById("pageImage")?.value.trim() || "";
+  const whatsapp = document.getElementById("pageWhatsapp")?.value.trim() || "";
 
   if (!title) {
     show("landingMessage", "اكتب عنوان الصفحة.", true);
@@ -172,10 +196,11 @@ async function saveLanding() {
     published: false
   };
 
-  const { error } = await sb.from("landing_pages").insert(payload);
+  const { error } = await client.from("landing_pages").insert(payload);
 
   if (error) {
-    show("landingMessage", error.message, true);
+    console.error("Save landing error:", error);
+    show("landingMessage", error.message || "تعذر حفظ الصفحة.", true);
     return;
   }
 
@@ -183,18 +208,21 @@ async function saveLanding() {
 
   ["pageTitle", "pageSlug", "pageHeadline", "pageDescription", "pageImage", "pageWhatsapp"]
     .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
+      const element = document.getElementById(id);
+      if (element) element.value = "";
     });
 
-  document.querySelectorAll(".product-check").forEach(x => x.checked = false);
+  document.querySelectorAll(".product-check").forEach(input => {
+    input.checked = false;
+  });
 
   await loadLandings();
 }
 
 async function loadLandings() {
+  const client = getClient();
   const list = document.getElementById("landingList");
-  if (!list) return;
+  if (!client || !list) return;
 
   if (!selectedBusiness) {
     list.innerHTML = '<div class="empty">اختر نشاطًا لعرض صفحاته.</div>';
@@ -203,14 +231,15 @@ async function loadLandings() {
 
   list.innerHTML = '<div class="loading">جاري تحميل الصفحات...</div>';
 
-  const { data, error } = await sb
+  const { data, error } = await client
     .from("landing_pages")
     .select("*")
     .eq("business_id", selectedBusiness.id)
     .order("created_at", { ascending: false });
 
   if (error) {
-    list.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+    console.error("Landing pages error:", error);
+    list.innerHTML = `<div class="empty">تعذر تحميل الصفحات: ${escapeHtml(error.message || "خطأ غير معروف")}</div>`;
     return;
   }
 
@@ -219,29 +248,30 @@ async function loadLandings() {
     return;
   }
 
-  list.innerHTML = data.map(p => `
+  list.innerHTML = data.map(page => `
     <div class="saved-item">
       <div>
-        <b>${escapeHtml(p.title || p.subtitle || "صفحة")}</b>
-        <small>${escapeHtml(p.page_type || "")}</small>
+        <b>${escapeHtml(page.title || page.subtitle || "صفحة")}</b>
+        <small>${escapeHtml(page.page_type || "")}</small>
       </div>
-      <button class="btn btn-danger" onclick="deleteLanding('${escapeAttr(p.id)}')">حذف</button>
+      <button class="btn btn-danger" onclick="deleteLanding('${escapeAttr(page.id)}')">حذف</button>
     </div>
   `).join("");
 }
 
 async function deleteLanding(id) {
-  if (!selectedBusiness) return;
+  const client = getClient();
+  if (!client || !selectedBusiness) return;
   if (!confirm("حذف الصفحة؟")) return;
 
-  const { error } = await sb
+  const { error } = await client
     .from("landing_pages")
     .delete()
     .eq("id", id)
     .eq("business_id", selectedBusiness.id);
 
   if (error) {
-    alert(error.message);
+    alert(error.message || "تعذر حذف الصفحة.");
     return;
   }
 
@@ -249,18 +279,22 @@ async function deleteLanding(id) {
 }
 
 function show(id, text, error = false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = text;
-  el.className = "message " + (error ? "error" : "success");
+  const element = document.getElementById(id);
+  if (!element) return;
+  element.textContent = text;
+  element.className = "message " + (error ? "error" : "success");
 }
 
-function escapeHtml(v) {
-  return String(v ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[m]));
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[character]));
 }
 
-function escapeAttr(v) {
-  return String(v ?? "").replace(/["'\\]/g, "");
+function escapeAttr(value) {
+  return String(value ?? "").replace(/["'\\]/g, "");
 }
