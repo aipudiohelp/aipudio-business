@@ -7,42 +7,70 @@ document.addEventListener("DOMContentLoaded", async () => {
   const msg = document.getElementById("status");
 
   try {
-    const [b, p, l] = await Promise.all([
-      supabaseClient
+    // عدد الأنشطة الخاصة بالمستخدم
+    const { count: businessCount, error: businessError } =
+      await supabaseClient
         .from("businesses")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", userId),
+        .eq("user_id", userId);
 
-      supabaseClient
-        .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId),
+    // جلب IDs الأنشطة الخاصة بالمستخدم
+    const { data: businesses, error: businessesError } =
+      await supabaseClient
+        .from("businesses")
+        .select("id")
+        .eq("user_id", userId);
 
-      supabaseClient
+    if (businessError || businessesError) {
+      throw businessError || businessesError;
+    }
+
+    const businessIds = (businesses || []).map((business) => business.id);
+
+    let productCount = 0;
+
+    // المنتجات مرتبطة بالنشاط عن طريق business_id
+    if (businessIds.length > 0) {
+      const { count, error: productError } =
+        await supabaseClient
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .in("business_id", businessIds);
+
+      if (productError) {
+        throw productError;
+      }
+
+      productCount = count ?? 0;
+    }
+
+    // عدد صفحات الهبوط الخاصة بالمستخدم
+    const { count: landingCount, error: landingError } =
+      await supabaseClient
         .from("landing_pages")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-    ]);
+        .eq("user_id", userId);
 
-    document.getElementById("businessCount").textContent = b.count ?? 0;
-    document.getElementById("productCount").textContent = p.count ?? 0;
-    document.getElementById("landingCount").textContent = l.count ?? 0;
-
-    const err = b.error || p.error || l.error;
-
-    if (err) {
-      console.error(err);
-      msg.textContent = err.message;
-      msg.className = "message error";
-      return;
+    if (landingError) {
+      console.warn("Landing pages:", landingError);
     }
+
+    document.getElementById("businessCount").textContent =
+      businessCount ?? 0;
+
+    document.getElementById("productCount").textContent =
+      productCount;
+
+    document.getElementById("landingCount").textContent =
+      landingCount ?? 0;
 
     msg.textContent = "";
     msg.className = "message";
 
-  } catch (e) {
-    console.error(e);
-    msg.textContent = e.message;
+  } catch (error) {
+    console.error("Dashboard error:", error);
+
+    msg.textContent = error.message;
     msg.className = "message error";
   }
 });
