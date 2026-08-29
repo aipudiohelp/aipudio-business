@@ -1,28 +1,338 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>صفحة الهبوط — Aipudio Business</title>
-  <link rel="stylesheet" href="css/Style.css"><link rel="stylesheet" href="css/dashboard.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>صفحات الهبوط — Aipudio Business</title>
+
+  <link rel="stylesheet" href="css/Style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+
+  <style>
+    .landing-builder {
+      display: grid;
+      gap: 22px;
+    }
+
+    .landing-section {
+      padding: 24px;
+      border-radius: 22px;
+      border: 1px solid rgba(139, 92, 246, .25);
+      background: rgba(17, 20, 40, .75);
+    }
+
+    .landing-section h2 {
+      margin: 0 0 8px;
+    }
+
+    .section-note {
+      margin: 0 0 20px;
+      color: #999db5;
+      font-size: 14px;
+    }
+
+    .business-preview {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, .2);
+    }
+
+    .business-preview strong {
+      font-size: 20px;
+    }
+
+    .products-selection {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .product-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 15px;
+      background: rgba(0,0,0,.18);
+      cursor: pointer;
+    }
+
+    .product-option input {
+      width: 20px;
+      height: 20px;
+      accent-color: #7c5cff;
+      flex-shrink: 0;
+    }
+
+    .product-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .product-name {
+      font-weight: 700;
+    }
+
+    .product-price {
+      color: #a9a4ff;
+      font-size: 14px;
+    }
+
+    .empty-box {
+      padding: 18px;
+      text-align: center;
+      color: #999db5;
+      border: 1px dashed rgba(255,255,255,.15);
+      border-radius: 15px;
+    }
+
+    .landing-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .landing-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 18px;
+      border-radius: 17px;
+      background: rgba(17,20,40,.8);
+      border: 1px solid rgba(139,92,246,.18);
+    }
+
+    .landing-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .landing-item-info small {
+      color: #999db5;
+    }
+
+    .landing-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 600px) {
+      .landing-item {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .landing-actions {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<header class="topbar"><a class="brand" href="dashboard.html">AIPUDIO <span>BUSINESS</span></a><a class="btn btn-ghost" href="dashboard.html">لوحة التحكم</a></header>
+
+<header class="topbar">
+  <a class="brand" href="dashboard.html">
+    AIPUDIO <span>BUSINESS</span>
+  </a>
+
+  <a class="btn btn-ghost" href="dashboard.html">
+    لوحة التحكم
+  </a>
+</header>
+
 <main class="container dashboard">
-  <section class="dash-head"><div><p class="eyebrow">LANDING PAGES</p><h1>صفحة هبوط</h1><p class="muted">أنشئ صفحة عرض بسيطة من بيانات نشاطك.</p></div></section>
-  <section class="card form-card">
-    <div class="form-grid">
-      <label>عنوان الصفحة<input id="pageTitle" placeholder="عنوان العرض"></label>
-      <label>الرابط المختصر<input id="pageSlug" placeholder="offer-01"></label>
-      <label class="full">العنوان الرئيسي<input id="pageHeadline" placeholder="عرضك يبدأ من هنا"></label>
-      <label class="full">الوصف<textarea id="pageDescription" rows="5" placeholder="تفاصيل العرض..."></textarea></label>
-      <label class="full">رابط الصورة<input id="pageImage" placeholder="https://..."></label>
-      <label class="full">رابط واتساب<input id="pageWhatsapp" placeholder="2010xxxxxxxx"></label>
+
+  <section class="dash-head">
+    <div>
+      <p class="eyebrow">LANDING PAGES</p>
+
+      <h1>صفحة هبوط</h1>
+
+      <p class="muted">
+        أنشئ صفحة عرض من نشاطك ومنتجاتك الموجودة بالفعل.
+      </p>
     </div>
-    <button id="saveLanding" class="btn btn-primary">حفظ الصفحة</button><div id="landingMessage" class="message"></div>
   </section>
-  <section class="section"><h2>الصفحات المحفوظة</h2><div id="landingList" class="landing-list"></div></section>
+
+  <div class="landing-builder">
+
+    <!-- اختيار النشاط -->
+    <section class="landing-section">
+
+      <h2>1. اختر النشاط</h2>
+
+      <p class="section-note">
+        سيتم استخدام بيانات النشاط المحفوظة تلقائيًا داخل صفحة الهبوط.
+      </p>
+
+      <label>
+        النشاط
+
+        <select id="businessSelect">
+          <option value="">جاري تحميل الأنشطة...</option>
+        </select>
+      </label>
+
+      <div id="businessPreview"></div>
+
+    </section>
+
+
+    <!-- اختيار المنتجات -->
+    <section class="landing-section">
+
+      <h2>2. اختر المنتجات</h2>
+
+      <p class="section-note">
+        حدد المنتجات التي تريد ظهورها في صفحة الهبوط.
+      </p>
+
+      <div id="productsSelection" class="products-selection">
+        <div class="empty-box">
+          اختر نشاطًا أولًا.
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- بيانات الصفحة -->
+    <section class="landing-section">
+
+      <h2>3. بيانات صفحة الهبوط</h2>
+
+      <p class="section-note">
+        هذه البيانات تخص الصفحة نفسها، وليست بيانات النشاط أو المنتجات.
+      </p>
+
+      <div class="form-grid">
+
+        <label>
+          عنوان الصفحة
+
+          <input
+            id="pageTitle"
+            type="text"
+            placeholder="مثال: عروض Dolabi-shop"
+          >
+        </label>
+
+
+        <label>
+          الرابط المختصر
+
+          <input
+            id="pageSlug"
+            type="text"
+            placeholder="dolabi-offer"
+          >
+        </label>
+
+
+        <label class="full">
+          العنوان الرئيسي
+
+          <input
+            id="pageHeadline"
+            type="text"
+            placeholder="اكتشف أحدث تشكيلاتنا"
+          >
+        </label>
+
+
+        <label class="full">
+          العنوان الفرعي
+
+          <textarea
+            id="pageSubtitle"
+            rows="3"
+            placeholder="أفضل الطرح والإشاربات بتصميمات تناسب ذوقك."
+          ></textarea>
+        </label>
+
+
+        <label class="full">
+          عنوان SEO
+
+          <input
+            id="seoTitle"
+            type="text"
+            placeholder="Dolabi-shop | طرح وإشاربات"
+          >
+        </label>
+
+
+        <label class="full">
+          وصف SEO
+
+          <textarea
+            id="seoDescription"
+            rows="3"
+            placeholder="متجر متخصص في الطرح والإشاربات..."
+          ></textarea>
+        </label>
+
+      </div>
+
+    </section>
+
+
+    <!-- النشر -->
+    <section class="landing-section">
+
+      <h2>4. إنشاء الصفحة</h2>
+
+      <p class="section-note">
+        بعد الإنشاء ستصبح الصفحة محفوظة ويمكن نشرها.
+      </p>
+
+      <button
+        id="saveLanding"
+        class="btn btn-primary"
+        type="button"
+      >
+        إنشاء صفحة الهبوط
+      </button>
+
+      <div id="landingMessage" class="message"></div>
+
+    </section>
+
+
+    <!-- الصفحات -->
+    <section class="section">
+
+      <h2>صفحات الهبوط الخاصة بك</h2>
+
+      <div id="landingList" class="landing-list">
+        <div class="empty-box">
+          جاري تحميل الصفحات...
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
 </main>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script><script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/landing.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/landing.js"></script>
+
 </body>
-</html>
+          </html>
