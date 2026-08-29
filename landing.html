@@ -3,87 +3,157 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>صفحة الهبوط — Aipudio Business</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css">
+  <title>صفحة هبوط — Aipudio Business</title>
   <style>
-    .product-option{display:flex;align-items:center;gap:10px;padding:12px 14px;margin:8px 0;border:1px solid rgba(255,255,255,.10);border-radius:12px;cursor:pointer}
-    .product-option input{accent-color:#8b5cf6}
-    .product-option small{color:#a9aec4}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      min-height:100vh;
+      background:#070914;
+      color:#f5f3ff;
+      font-family:Arial,"Tahoma",sans-serif;
+      background-image:
+        radial-gradient(circle at 80% 15%,rgba(125,72,255,.20),transparent 34%),
+        linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+      background-size:auto,48px 48px,48px 48px;
+    }
+    a{text-decoration:none;color:inherit}
+    .topbar{
+      width:calc(100% - 32px);max-width:1100px;margin:16px auto 0;
+      min-height:84px;padding:16px 20px;border:1px solid #292343;border-radius:28px;
+      background:rgba(10,13,29,.82);display:flex;align-items:center;justify-content:space-between;
+      gap:16px;box-shadow:0 0 35px rgba(105,63,255,.08)
+    }
+    .brand{font-size:20px;font-weight:800;letter-spacing:1px}
+    .brand span{color:#9b74ff}
+    .btn{
+      border:1px solid #34304d;border-radius:16px;padding:13px 20px;
+      background:#111528;color:#fff;font-size:16px;cursor:pointer
+    }
+    .btn-primary{
+      border:0;background:linear-gradient(135deg,#8d4cff,#4d7dff);
+      box-shadow:0 10px 30px rgba(91,79,255,.22);font-weight:700
+    }
+    .btn-danger{background:#32151b;border-color:#67232c;color:#ffb8bd}
+    .container{width:calc(100% - 32px);max-width:1100px;margin:0 auto;padding:65px 0 90px}
+    .dash-head{margin-bottom:35px}
+    .eyebrow{color:#9b74ff;font-weight:800;letter-spacing:3px;font-size:15px}
+    h1{font-size:46px;margin:10px 0 12px}
+    h2{font-size:30px;margin:0 0 18px}
+    .muted{color:#a6a6b8;font-size:18px;line-height:1.8}
+    .card,.step{
+      border:1px solid #30295a;border-radius:28px;background:rgba(16,20,40,.82);
+      box-shadow:0 18px 60px rgba(0,0,0,.18);padding:28px;margin-bottom:28px
+    }
+    .step-title{font-size:30px;font-weight:800;margin:0 0 10px}
+    .step-desc{color:#a6a6b8;line-height:1.8;margin:0 0 22px}
+    label{display:block;color:#aaa9b8;font-size:16px;font-weight:700;margin-bottom:18px}
+    input,textarea,select{
+      width:100%;margin-top:9px;border:1px solid #303449;border-radius:15px;
+      background:#090c15;color:#f6f4ff;padding:16px;font-size:16px;outline:none
+    }
+    input:focus,textarea:focus,select:focus{border-color:#7759e8;box-shadow:0 0 0 3px rgba(119,89,232,.12)}
+    textarea{resize:vertical;min-height:130px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+    .full{grid-column:1/-1}
+    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .message{margin-top:15px;min-height:24px;font-size:15px}
+    .success{color:#9ef0c2}.error{color:#ff9ca6}
+    .empty{
+      border:1px dashed #373552;border-radius:18px;padding:22px;text-align:center;color:#9998aa
+    }
+    .product-list{display:grid;gap:12px}
+    .product-row{
+      display:flex;align-items:center;gap:15px;border:1px solid #292d42;
+      border-radius:18px;padding:15px;background:#0b0f1c
+    }
+    .product-row input{width:auto;margin:0;accent-color:#7b58f2}
+    .product-info{flex:1}.product-info b{display:block;font-size:17px;margin-bottom:5px}
+    .product-meta{color:#9697a9;font-size:14px}
+    .loading{color:#a9a7ba;padding:10px 0}
+    .selected-info{
+      padding:15px 17px;border-radius:16px;background:#0a0e1a;
+      border:1px solid #292d42;color:#c9c7d7;margin-top:15px
+    }
+    .saved-item{
+      display:flex;justify-content:space-between;align-items:center;gap:16px;
+      border:1px solid #292d42;border-radius:18px;padding:17px;background:#0b0f1c;margin-bottom:12px
+    }
+    .saved-item small{display:block;color:#8e8ea0;margin-top:5px}
+    @media(max-width:700px){
+      .topbar{min-height:70px;padding:12px 15px}
+      .brand{font-size:15px}.btn{padding:11px 14px;font-size:14px}
+      .container{padding-top:45px}
+      h1{font-size:38px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}
+      .step{padding:20px;border-radius:22px}.step-title{font-size:27px}
+      .saved-item{align-items:flex-start}
+    }
   </style>
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="dashboard.html">AIPUDIO <span>BUSINESS</span></a>
-  <a class="btn btn-ghost" href="dashboard.html">لوحة التحكم</a>
+  <a class="btn" href="dashboard.html">لوحة التحكم</a>
 </header>
 
-<main class="container dashboard">
+<main class="container">
   <section class="dash-head">
-    <div>
-      <p class="eyebrow">LANDING PAGES</p>
-      <h1>صفحة هبوط</h1>
-      <p class="muted">أنشئ صفحة عرض من نشاطك ومنتجاتك المسجلة بالفعل.</p>
-    </div>
+    <p class="eyebrow">LANDING PAGES</p>
+    <h1>صفحة هبوط</h1>
+    <p class="muted">أنشئ صفحة عرض من نشاطك ومنتجاتك المسجلة — بدون إعادة إدخال البيانات.</p>
   </section>
 
-  <section class="card form-card">
-    <div class="section">
-      <h2>1. اختر النشاط</h2>
-      <p class="muted">بيانات النشاط تُقرأ تلقائيًا من النشاط المسجل.</p>
-      <label>النشاط
-        <select id="businessSelect">
-          <option value="">جاري تحميل الأنشطة...</option>
-        </select>
+  <section class="step">
+    <h2 class="step-title">1. اختر النشاط</h2>
+    <p class="step-desc">بيانات النشاط تُقرأ تلقائيًا من النشاطات التي أضفتها في حسابك.</p>
+    <label>
+      النشاط
+      <select id="businessSelect">
+        <option value="">جاري تحميل الأنشطة...</option>
+      </select>
+    </label>
+    <div id="businessInfo" class="selected-info" hidden></div>
+  </section>
+
+  <section class="step">
+    <h2 class="step-title">2. اختر المنتجات</h2>
+    <p class="step-desc">حدد المنتجات التي تريد إظهارها في صفحة الهبوط.</p>
+    <div id="productList" class="loading">اختر نشاطًا أولًا.</div>
+  </section>
+
+  <section class="step">
+    <h2 class="step-title">3. بيانات صفحة الهبوط</h2>
+    <p class="step-desc">هذه البيانات خاصة بالصفحة نفسها، أما النشاط والمنتجات فيتم ربطهما تلقائيًا.</p>
+    <div class="form-grid">
+      <label>عنوان الصفحة
+        <input id="pageTitle" placeholder="مثال: عروض دولابي">
+      </label>
+      <label>الرابط المختصر
+        <input id="pageSlug" placeholder="dolabi-offer">
+      </label>
+      <label class="full">العنوان الرئيسي
+        <input id="pageHeadline" placeholder="أفضل عروضنا في مكان واحد">
+      </label>
+      <label class="full">الوصف
+        <textarea id="pageDescription" placeholder="اكتب وصفًا مختصرًا للعرض أو النشاط..."></textarea>
+      </label>
+      <label>رابط الصورة
+        <input id="pageImage" placeholder="https://...">
+      </label>
+      <label>رقم واتساب
+        <input id="pageWhatsapp" placeholder="2010xxxxxxxx">
       </label>
     </div>
-
-    <div class="section">
-      <h2>2. اختر المنتجات</h2>
-      <p class="muted">حدد المنتجات التي تريد ظهورها في صفحة الهبوط.</p>
-      <div id="productsList" class="product-list">
-        <div class="empty">جاري تحميل المنتجات...</div>
-      </div>
+    <div class="actions">
+      <button id="saveLanding" class="btn btn-primary">حفظ صفحة الهبوط</button>
+      <div id="landingMessage" class="message"></div>
     </div>
-
-    <div class="section">
-      <h2>3. بيانات صفحة الهبوط</h2>
-      <p class="muted">هذه البيانات خاصة بالصفحة، أما النشاط والمنتجات فيتم ربطهما تلقائيًا.</p>
-
-      <div class="form-grid">
-        <label>عنوان الصفحة
-          <input id="pageTitle" placeholder="مثال: عروض دولابي">
-        </label>
-
-        <label>الرابط المختصر
-          <input id="pageSlug" placeholder="dolabi-offer">
-        </label>
-
-        <label class="full">العنوان الرئيسي
-          <input id="pageHeadline" placeholder="عرضك يبدأ من هنا">
-        </label>
-
-        <label class="full">الوصف
-          <textarea id="pageDescription" rows="5" placeholder="تفاصيل العرض..."></textarea>
-        </label>
-
-        <label class="full">رابط الصورة
-          <input id="pageImage" placeholder="https://...">
-        </label>
-
-        <label class="full">رابط واتساب
-          <input id="pageWhatsapp" placeholder="2010xxxxxxxx">
-        </label>
-      </div>
-    </div>
-
-    <button id="saveLanding" class="btn btn-primary">حفظ الصفحة</button>
-    <div id="landingMessage" class="message"></div>
   </section>
 
-  <section class="section">
+  <section class="step">
     <h2>الصفحات المحفوظة</h2>
-    <div id="landingList" class="landing-list"></div>
+    <div id="landingList"></div>
   </section>
 </main>
 
