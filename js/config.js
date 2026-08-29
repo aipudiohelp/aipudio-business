@@ -3,5 +3,5 @@
 // لا تضع service_role key في الواجهة الأمامية.
 window.AIPUDIO_CONFIG = {
   SUPABASE_URL: "https://bimhfrxsukvfetbzksfh.supabase.co",
-  SUPABASE_ANON_KEY: "PASTE_YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY_HERE"
+  SUPABASE_ANON_KEY: "sb_publishable_shqv73D6gUwiz1Q6JpMPyQ_gLevomHz"
 };
