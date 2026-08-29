@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>صفحة الهبوط — Aipudio Business</title>
+  <link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="dashboard.html">AIPUDIO <span>BUSINESS</span></a><a class="btn btn-ghost" href="dashboard.html">لوحة التحكم</a></header>
+<main class="container dashboard">
+  <section class="dash-head"><div><p class="eyebrow">LANDING PAGES</p><h1>صفحة هبوط</h1><p class="muted">أنشئ صفحة عرض بسيطة من بيانات نشاطك.</p></div></section>
+  <section class="card form-card">
+    <div class="form-grid">
+      <label>عنوان الصفحة<input id="pageTitle" placeholder="عنوان العرض"></label>
+      <label>الرابط المختصر<input id="pageSlug" placeholder="offer-01"></label>
+      <label class="full">العنوان الرئيسي<input id="pageHeadline" placeholder="عرضك يبدأ من هنا"></label>
+      <label class="full">الوصف<textarea id="pageDescription" rows="5" placeholder="تفاصيل العرض..."></textarea></label>
+      <label class="full">رابط الصورة<input id="pageImage" placeholder="https://..."></label>
+      <label class="full">رابط واتساب<input id="pageWhatsapp" placeholder="2010xxxxxxxx"></label>
+    </div>
+    <button id="saveLanding" class="btn btn-primary">حفظ الصفحة</button><div id="landingMessage" class="message"></div>
+  </section>
+  <section class="section"><h2>الصفحات المحفوظة</h2><div id="landingList" class="landing-list"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script><script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/landing.js"></script>
+</body>
+</html>

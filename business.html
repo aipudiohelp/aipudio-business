@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>النشاط — Aipudio Business</title>
+  <link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="dashboard.html">AIPUDIO <span>BUSINESS</span></a><a class="btn btn-ghost" href="dashboard.html">لوحة التحكم</a></header>
+<main class="container dashboard">
+  <section class="dash-head"><div><p class="eyebrow">BUSINESS</p><h1>بيانات النشاط</h1></div></section>
+  <section class="card form-card">
+    <div class="form-grid">
+      <label>اسم النشاط<input id="businessName" placeholder="مثال: متجر ..."></label>
+      <label>الرابط المختصر<input id="businessSlug" placeholder="my-business"></label>
+      <label class="full">الوصف<textarea id="businessDescription" rows="4" placeholder="وصف مختصر للنشاط"></textarea></label>
+      <label class="full">رقم واتساب<input id="businessWhatsapp" placeholder="2010xxxxxxxx"></label>
+    </div>
+    <button id="saveBusiness" class="btn btn-primary">حفظ البيانات</button><div id="businessMessage" class="message"></div>
+  </section>
+  <section id="products" class="section">
+    <div class="section-head"><h2>المنتجات</h2><button id="addProductBtn" class="btn btn-primary">+ منتج</button></div>
+    <div id="productsList" class="product-list"></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script><script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/business.js"></script>
+</body>
+</html>
